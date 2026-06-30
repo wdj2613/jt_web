@@ -7,7 +7,9 @@
 import logging
 import requests
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from ..config import config
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,12 @@ class GamerSkyAPI:
     """GamerSky APP API 客户端"""
 
     def __init__(self) -> None:
-        self.base_url = "http://appapi2.gamersky.com/v5/"
+        # 从配置文件读取 API 地址和超时（优先级：config.json > 硬编码默认值）
+        self.base_url = config.get("api.base_url", "http://appapi2.gamersky.com/v5/")
+        # 确保 base_url 以 / 结尾
+        if not self.base_url.endswith("/"):
+            self.base_url += "/"
+
         self.headers = {
             "Content-Type": "application/json",
             "User-Agent": (
@@ -25,6 +32,7 @@ class GamerSkyAPI:
                 "Chrome/91.0.4472.124 Safari/537.36"
             ),
         }
+
         # API 设备指纹信息（与原 APP 行为一致）
         self.api_config = {
             "app": "GSAPP",
@@ -34,6 +42,18 @@ class GamerSkyAPI:
             "osVersion": "11",
             "deviceId": "4034c60353b640dbaf408ee71f1d68a2",
         }
+
+        # 超时配置：(连接超时, 读取超时)，均为秒
+        # 连接超时短可避免 Docker 中 gunicorn worker 因 TCP connect 挂死而被 timeout 机制杀死
+        api_timeout = config.get("api.timeout", 30)
+        if isinstance(api_timeout, (int, float)):
+            self.timeout: Union[float, Tuple[float, float]] = (
+                max(3, min(10, api_timeout // 6)),   # 连接超时: 3~10 秒
+                max(10, api_timeout - 5),             # 读取超时: 至少 10 秒
+            )
+        else:
+            # 如果配置中已经是 (connect, read) 格式则直接使用
+            self.timeout = api_timeout
 
     # ------------------------------------------------------------------
     # 新闻列表
@@ -70,13 +90,16 @@ class GamerSkyAPI:
 
         try:
             response = requests.post(
-                url, headers=self.headers, json=payload, timeout=30
+                url, headers=self.headers, json=payload, timeout=self.timeout
             )
             response.raise_for_status()
             data = response.json()
             return self.process_news_list(data)
+        except requests.exceptions.ConnectTimeout:
+            logger.warning("连接上游 API 超时: %s (type=%s)", url, img_type)
+            return None
         except requests.exceptions.Timeout:
-            logger.warning("请求新闻列表超时: %s (type=%s, page=%s)", url, img_type, page_index)
+            logger.warning("请求新闻列表读取超时: %s (type=%s, page=%s)", url, img_type, page_index)
             return None
         except requests.exceptions.RequestException as exc:
             logger.error("请求新闻列表失败: %s (type=%s, page=%s)", exc, img_type, page_index)
@@ -134,13 +157,16 @@ class GamerSkyAPI:
 
         try:
             response = requests.post(
-                url, headers=self.headers, json=payload, timeout=30
+                url, headers=self.headers, json=payload, timeout=self.timeout
             )
             response.raise_for_status()
             data = response.json()
             return self.process_article_detail(data)
+        except requests.exceptions.ConnectTimeout:
+            logger.warning("连接上游 API 超时: %s (articleId=%s)", url, article_id)
+            return None
         except requests.exceptions.Timeout:
-            logger.warning("请求文章详情超时: %s (articleId=%s)", url, article_id)
+            logger.warning("请求文章详情读取超时: %s (articleId=%s)", url, article_id)
             return None
         except requests.exceptions.RequestException as exc:
             logger.error("请求文章详情失败: %s (articleId=%s)", exc, article_id)

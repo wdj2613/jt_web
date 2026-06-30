@@ -49,6 +49,9 @@ RUN chmod +x /app/docker-entrypoint.sh
 # 创建日志目录并赋权
 RUN mkdir -p logs && chown -R app:app logs
 
+# 赋予 app 用户对 /app 的写权限（gunicorn 需要在此创建 .gunicorn 控制目录）
+RUN chown app:app /app
+
 # 切换到非 root 用户
 USER app
 
@@ -65,6 +68,7 @@ ENTRYPOINT ["/app/docker-entrypoint.sh"]
 # 使用 gunicorn 作为生产 WSGI 服务器
 # -w 4: 4 个 worker 进程（一般 CPU 核数 * 2 + 1）
 # -b 0.0.0.0:5000: 绑定所有网卡
+# --timeout 60: worker 超时（秒），应大于 API 请求最大超时时间
 # --access-logfile -: 访问日志输出到 stdout
 # --error-logfile -: 错误日志输出到 stderr
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--access-logfile", "-", "--error-logfile", "-", "src.app_factory:create_app()"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-", "src.app_factory:create_app()"]
