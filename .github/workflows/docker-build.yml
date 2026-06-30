@@ -28,25 +28,14 @@ jobs:
           username: ${{ secrets.DOCKERNAME }}
           password: ${{ secrets.DOCKERTOKEN }}
 
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKERNAME }}/daily-jiongtu
-          tags: |
-            type=ref,event=branch
-            type=sha,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # 如需多架构构建（amd64 + arm64），取消下面注释：
-          # platforms: linux/amd64,linux/arm64
+          tags: ${{ env.IMAGE_NAME }}:latest
+          # 多架构构建（amd64 + arm64）
+          platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
