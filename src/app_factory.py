@@ -4,10 +4,12 @@
 - 注册路由
 - 配置 CORS、缓存
 - 初始化日志
+- 配置用户认证
 """
 
 import logging
 import os
+import secrets
 import signal
 import sys
 from logging.handlers import RotatingFileHandler
@@ -17,6 +19,7 @@ from flask import Flask
 from flask_caching import Cache
 from flask_cors import CORS
 
+from .auth import register_auth_routes
 from .config import config
 from .routes.news_routes import register_news_routes
 
@@ -72,6 +75,22 @@ def create_app() -> Flask:
     _setup_logging(app)
     app.logger.info("初始化 JT_WEB 应用...")
 
+    # --- Session 密钥（Flask session 加密用） ---
+    # 优先级：环境变量 > config.json > 随机生成
+    secret_key = os.environ.get(
+        "SECRET_KEY",
+        config.get("auth.secret_key", None),
+    )
+    if not secret_key:
+        secret_key = secrets.token_hex(32)
+        app.logger.warning(
+            "未配置 SECRET_KEY，已生成随机密钥。多进程/重启后所有 session 将失效。"
+        )
+    app.secret_key = secret_key
+
+    # --- 用户认证（必须在新闻路由之前注册，避免 /login 被 SPA fallback 拦截）---
+    register_auth_routes(app)
+
     # CORS：默认允许同源；如需开放可改为 config 中读取白名单
     cors_origins = config.get("cors.origins", "*")
     if cors_origins == "*":
@@ -91,6 +110,10 @@ def create_app() -> Flask:
 
     # 注册新闻路由
     register_news_routes(app, cache)
+
+    # 日志输出认证状态
+    auth_config = config.get("auth.enabled", False) or os.environ.get("AUTH_ENABLED", "").lower() in ("true", "1", "yes")
+    app.logger.info("认证状态: %s", "已启用" if auth_config else "未启用")
 
     # 全局错误处理
     @app.errorhandler(404)

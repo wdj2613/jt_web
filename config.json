@@ -15,6 +15,12 @@
   "api": {
     "timeout": 30
   },
+  "auth": {
+    "enabled": false,
+    "username": "admin",
+    "password": "changeme",
+    "secret_key": ""
+  },
   "cors": {
     "origins": "*"
   },
