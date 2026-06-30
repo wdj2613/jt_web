@@ -134,7 +134,6 @@ body.sidebar-open {
 }
 
 .md3-menu-button,
-.md3-theme-toggle,
 .md3-icon-button,
 .md3-refresh-button {
   width: 42px;
@@ -154,7 +153,6 @@ body.sidebar-open {
 }
 
 .md3-menu-button:hover,
-.md3-theme-toggle:hover,
 .md3-icon-button:hover,
 .md3-refresh-button:hover {
   background: var(--brand-soft);
@@ -163,7 +161,6 @@ body.sidebar-open {
 }
 
 .md3-menu-button:active,
-.md3-theme-toggle:active,
 .md3-icon-button:active,
 .md3-refresh-button:active {
   transform: translateY(0);
