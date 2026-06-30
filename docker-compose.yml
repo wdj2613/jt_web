@@ -20,8 +20,6 @@ services:
     volumes:
       # 持久化日志（容器重启不丢失）
       - ./logs:/app/logs
-      # 持久化配置（修改 config.json 无需重新构建镜像）
-      - ./config.json:/app/config.json:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5000/api/health"]
