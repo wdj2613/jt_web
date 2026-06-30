@@ -7,17 +7,17 @@
   <meta name="description" content="每日囧图 - 流畅浏览动态图与囧图专栏">
   <title>每日囧图</title>
 
-  <!-- 字体 -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- 字体（使用国内可访问的 loli.net 反代镜像） -->
+  <link rel="preconnect" href="https://fonts.loli.net">
+  <link rel="preconnect" href="https://gstatic.loli.net" crossorigin>
+  <link href="https://fonts.loli.net/css2?family=Manrope:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 
   <!-- Material Design 3 样式 -->
   <link rel="stylesheet" href="/static/css/md3-styles.css">
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Vue 3 -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Tailwind CSS (Play CDN，本地托管避免境外 CDN 加载缓慢) -->
+  <script src="/static/js/tailwind-play-cdn.js"></script>
+  <!-- Vue 3（使用国内 BootCDN 镜像加速） -->
+  <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.5.13/vue.global.prod.js"></script>
   <!-- 本地图片错误处理 -->
   <script src="/static/js/image-placeholder.js"></script>
 </head>
@@ -459,6 +459,18 @@
         const API_BASE_URL = '/api';
         let lastAction = null; // 记录上次失败的请求，用于重试
 
+        // 封装 fetch，自动处理 401 → 跳转登录页
+        const apiFetch = async (url, options = {}) => {
+          const response = await fetch(url, options);
+          if (response.status === 401) {
+            window.location.href = '/login?next=' +
+              encodeURIComponent(window.location.pathname + window.location.search);
+            throw new Error('Unauthorized');
+          }
+          if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
+          return response;
+        };
+
         const parseURLState = () => {
           const urlParams = new URLSearchParams(window.location.search);
           const category = urlParams.get('category') || '囧图';
@@ -647,7 +659,7 @@
           error.value = '';
 
           const action = async () => {
-            const response = await fetch(API_BASE_URL + '/news/list', {
+            const response = await apiFetch(API_BASE_URL + '/news/list', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               referrerPolicy: 'no-referrer',
@@ -676,7 +688,6 @@
               })
             });
 
-            if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
             const data = await response.json();
             if (!data.success) throw new Error(data.error || '获取数据失败');
 
@@ -715,7 +726,7 @@
           error.value = '';
 
           const action = async () => {
-            const response = await fetch(API_BASE_URL + '/article/detail', {
+            const response = await apiFetch(API_BASE_URL + '/article/detail', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               referrerPolicy: 'no-referrer',
@@ -736,7 +747,6 @@
               })
             });
 
-            if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
             const data = await response.json();
             if (!data.success) throw new Error(data.error || '获取文章详情失败');
 

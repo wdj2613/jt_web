@@ -142,7 +142,7 @@ def login_required(f):
             return f(*args, **kwargs)
         if request.path.startswith("/api/"):
             return jsonify({"success": False, "error": "Unauthorized", "errorCode": 401}), 401
-        return redirect(url_for("login_page", next=request.url))
+        return redirect(url_for("login_page", next=request.full_path or "/"))
 
     return decorated
 
@@ -175,11 +175,8 @@ def _make_before_request_handler():
             return jsonify({"success": False, "error": "Unauthorized", "errorCode": 401}), 401
 
         # 页面请求 → 重定向登录页
-        # 保留原始 URL 以便登录后跳回
-        login_url = url_for("login_page")
-        if request.url and request.url not in (login_url, request.host_url.rstrip("/") + login_url):
-            login_url = url_for("login_page", next=request.url)
-        return redirect(login_url)
+        # 保留原始路径以便登录后跳回（/login 已在上方白名单中豁免）
+        return redirect(url_for("login_page", next=request.full_path or "/"))
 
     return _check_auth
 

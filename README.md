@@ -15,6 +15,7 @@
 - 触摸滑动返回（移动端详情页从左缘右滑）
 - URL 状态同步，支持浏览器前进/后退
 - 图片懒加载与加载失败占位
+- **用户认证**：基于 Session 的登录保护，支持通过配置文件或环境变量启用
 
 ### 体验优化
 - 骨架屏加载占位
@@ -74,6 +75,11 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - PYTHONUNBUFFERED=1
+      # 可选：启用用户认证
+      # - AUTH_ENABLED=true
+      # - AUTH_USERNAME=admin
+      # - AUTH_PASSWORD=changeme
+      # - SECRET_KEY=your-random-secret-key
     volumes:
       - ./logs:/app/logs
       - ./config.json:/app/config.json:ro
@@ -180,6 +186,12 @@ gunicorn -w 4 -b 0.0.0.0:5000 \
     "threshold": 500
   },
   "api": { "timeout": 30 },
+  "auth": {
+    "enabled": false,
+    "username": "admin",
+    "password": "changeme",
+    "secret_key": ""
+  },
   "cors": { "origins": "*" },
   "logging": {
     "level": "INFO",
@@ -196,7 +208,63 @@ gunicorn -w 4 -b 0.0.0.0:5000 \
 | `cache.news_list_timeout` | `120` | 新闻列表缓存秒数 |
 | `cache.article_detail_timeout` | `600` | 文章详情缓存秒数 |
 | `cors.origins` | `"*"` | CORS 允许来源；限制白名单用数组如 `["https://example.com"]` |
+| `auth.enabled` | `false` | 是否启用用户认证（设为 `true` 后需登录才能访问） |
+| `auth.username` | `admin` | 登录用户名 |
+| `auth.password` | `changeme` | 登录密码 |
+| `auth.secret_key` | `""` | Flask Session 加密密钥，留空则每次启动随机生成（多进程/重启后 session 失效） |
 | `logging.file` | `logs/app.log` | 日志文件路径，Docker 中已挂载持久化卷 |
+
+### 用户认证
+
+应用支持基于 Session 的用户认证，适用于需要对网站访问进行保护的场景（如内网部署、个人使用）。
+
+**启用认证**：
+
+```bash
+# 方式一：环境变量（推荐，无需改配置文件）
+AUTH_ENABLED=true python app.py
+
+# 方式二：修改 config.json
+# 将 auth.enabled 设为 true
+```
+
+Docker 部署时通过环境变量注入：
+
+```bash
+docker run -d --name daily-jiongtu -p 5000:5000 \
+  -e AUTH_ENABLED=true \
+  -e AUTH_USERNAME=myuser \
+  -e AUTH_PASSWORD=mypassword \
+  wdj2613/daily-jiongtu:latest
+```
+
+或在 `docker-compose.yml` 中添加：
+
+```yaml
+environment:
+  - AUTH_ENABLED=true
+  - AUTH_USERNAME=myuser
+  - AUTH_PASSWORD=mypassword
+```
+
+**认证行为**：
+
+- 未登录用户访问任何页面 → 自动跳转到 `/login` 登录页
+- 未登录 API 请求 → 返回 `401` JSON 错误
+- 登录成功后 → 跳转回原始访问的 URL
+- Session 过期后 → 前端自动跳转登录页（无需手动刷新）
+- `/static/` 静态资源、`/api/health` 健康检查不要求认证
+
+**配置优先级**：环境变量 > `config.json`。所有环境变量：
+
+| 环境变量 | 对应配置 | 说明 |
+| --- | --- | --- |
+| `AUTH_ENABLED` | `auth.enabled` | `true` / `false` |
+| `AUTH_USERNAME` | `auth.username` | 登录用户名 |
+| `AUTH_PASSWORD` | `auth.password` | 登录密码 |
+| `SECRET_KEY` | `auth.secret_key` | Session 加密密钥（生产环境务必设置固定值） |
+
+> **生产环境建议**：务必设置 `SECRET_KEY` 环境变量为固定随机字符串，否则每次重启后所有用户 Session 将失效，需要重新登录。可运行 `python -c "import secrets; print(secrets.token_hex(32))"` 生成一个。
 
 > Docker 部署时，修改 `config.json` 后执行 `docker compose restart web` 即可生效，无需重新构建镜像。
 
@@ -308,6 +376,7 @@ gunicorn -w 4 -b 0.0.0.0:5000 \
 
 ## 安全说明
 
+- 支持基于 Session 的用户认证，可限制未授权访问
 - 所有来自上游的 HTML 内容均通过 bleach 进行白名单清理，移除 `<script>`、内联事件、危险协议
 - 文章标题/作者等字段通过 `html.escape` 转义
 - 图片 URL 强制添加 `referrerpolicy="no-referrer"`

@@ -15,7 +15,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_caching import Cache
 from flask_cors import CORS
 
