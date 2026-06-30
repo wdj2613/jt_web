@@ -89,28 +89,82 @@ class GamerSkyAPI:
         }
 
         try:
+            logger.info(
+                "[上游请求] 新闻列表 POST %s | tags=%s page=%s size=%s",
+                url, img_type, page_index, page_size,
+            )
             response = requests.post(
                 url, headers=self.headers, json=payload, timeout=self.timeout
             )
+            logger.info(
+                "[上游响应] 新闻列表 HTTP %s | %.1fs | Content-Length: %s",
+                response.status_code,
+                response.elapsed.total_seconds(),
+                len(response.content),
+            )
             response.raise_for_status()
             data = response.json()
+            logger.info(
+                "[上游数据] 新闻列表 | errorCode=%s errorMessage=%r | result(原始)=%s条",
+                data.get("errorCode"), data.get("errorMessage", ""),
+                len(data.get("result", [])),
+            )
             return self.process_news_list(data)
         except requests.exceptions.ConnectTimeout:
-            logger.warning("连接上游 API 超时: %s (type=%s)", url, img_type)
+            logger.warning(
+                "[上游超时] 连接超时 %s | type=%s timeout=%s",
+                url, img_type, self.timeout,
+            )
+            return None
+        except requests.exceptions.ReadTimeout:
+            logger.warning(
+                "[上游超时] 读取超时 %s | type=%s page=%s timeout=%s",
+                url, img_type, page_index, self.timeout,
+            )
             return None
         except requests.exceptions.Timeout:
-            logger.warning("请求新闻列表读取超时: %s (type=%s, page=%s)", url, img_type, page_index)
+            logger.warning(
+                "[上游超时] 请求超时 %s | type=%s page=%s",
+                url, img_type, page_index,
+            )
+            return None
+        except requests.exceptions.ConnectionError as exc:
+            logger.error(
+                "[上游异常] 连接失败 %s | type=%s page=%s | %s",
+                url, img_type, page_index, exc,
+            )
+            return None
+        except requests.exceptions.HTTPError as exc:
+            resp_text = getattr(exc, 'response', None)
+            resp_text = resp_text.text[:500] if resp_text is not None else "N/A"
+            logger.error(
+                "[上游异常] HTTP错误 %s | type=%s | %s | 响应内容: %.500s",
+                url, img_type, exc, resp_text,
+            )
             return None
         except requests.exceptions.RequestException as exc:
-            logger.error("请求新闻列表失败: %s (type=%s, page=%s)", exc, img_type, page_index)
+            logger.error(
+                "[上游异常] 请求异常 %s | type=%s page=%s | %s",
+                url, img_type, page_index, exc,
+            )
             return None
         except ValueError as exc:
-            logger.error("解析新闻列表 JSON 失败: %s", exc)
+            resp_text = getattr(exc, 'response', None)
+            resp_text = resp_text.text[:500] if resp_text is not None else "N/A"
+            logger.error(
+                "[上游异常] JSON解析失败 %s | type=%s | %s | 原始响应: %.500s",
+                url, img_type, exc, resp_text,
+            )
             return None
 
     def process_news_list(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """清洗新闻列表数据，统一字段名"""
         if not raw_data or raw_data.get("errorCode") != 0:
+            logger.warning(
+                "[上游异常] 新闻列表上游返回错误 | errorCode=%s errorMessage=%s",
+                raw_data.get("errorCode") if raw_data else "N/A",
+                raw_data.get("errorMessage", "上游返回空") if raw_data else "raw_data is None",
+            )
             return raw_data
 
         processed_result: List[Dict[str, Any]] = []
@@ -156,28 +210,81 @@ class GamerSkyAPI:
         }
 
         try:
+            logger.info(
+                "[上游请求] 文章详情 POST %s | articleId=%s",
+                url, article_id,
+            )
             response = requests.post(
                 url, headers=self.headers, json=payload, timeout=self.timeout
             )
+            logger.info(
+                "[上游响应] 文章详情 HTTP %s | %.1fs | Content-Length: %s",
+                response.status_code,
+                response.elapsed.total_seconds(),
+                len(response.content),
+            )
             response.raise_for_status()
             data = response.json()
+            logger.info(
+                "[上游数据] 文章详情 | errorCode=%s errorMessage=%r | result=%s条",
+                data.get("errorCode"), data.get("errorMessage", ""),
+                len(data.get("result", [])),
+            )
             return self.process_article_detail(data)
         except requests.exceptions.ConnectTimeout:
-            logger.warning("连接上游 API 超时: %s (articleId=%s)", url, article_id)
+            logger.warning(
+                "[上游超时] 连接超时 %s | articleId=%s timeout=%s",
+                url, article_id, self.timeout,
+            )
+            return None
+        except requests.exceptions.ReadTimeout:
+            logger.warning(
+                "[上游超时] 读取超时 %s | articleId=%s timeout=%s",
+                url, article_id, self.timeout,
+            )
             return None
         except requests.exceptions.Timeout:
-            logger.warning("请求文章详情读取超时: %s (articleId=%s)", url, article_id)
+            logger.warning(
+                "[上游超时] 请求超时 %s | articleId=%s",
+                url, article_id,
+            )
+            return None
+        except requests.exceptions.ConnectionError as exc:
+            logger.error(
+                "[上游异常] 连接失败 %s | articleId=%s | %s",
+                url, article_id, exc,
+            )
+            return None
+        except requests.exceptions.HTTPError as exc:
+            resp_text = getattr(exc, 'response', None)
+            resp_text = resp_text.text[:500] if resp_text is not None else "N/A"
+            logger.error(
+                "[上游异常] HTTP错误 %s | articleId=%s | %s | 响应内容: %.500s",
+                url, article_id, exc, resp_text,
+            )
             return None
         except requests.exceptions.RequestException as exc:
-            logger.error("请求文章详情失败: %s (articleId=%s)", exc, article_id)
+            logger.error(
+                "[上游异常] 请求异常 %s | articleId=%s | %s",
+                url, article_id, exc,
+            )
             return None
         except ValueError as exc:
-            logger.error("解析文章详情 JSON 失败: %s", exc)
+            logger.error(
+                "[上游异常] JSON解析失败 %s | articleId=%s | %s",
+                url, article_id, exc,
+            )
             return None
 
     def process_article_detail(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """清洗文章详情数据"""
         if not raw_data or raw_data.get("errorCode") != 0 or not raw_data.get("result"):
+            logger.warning(
+                "[上游异常] 文章详情上游返回错误 | errorCode=%s errorMessage=%s has_result=%s",
+                raw_data.get("errorCode") if raw_data else "N/A",
+                raw_data.get("errorMessage", "上游返回空") if raw_data else "raw_data is None",
+                bool(raw_data.get("result")) if raw_data else False,
+            )
             return raw_data
 
         article = raw_data["result"][0]
