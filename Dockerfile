@@ -42,6 +42,10 @@ COPY --from=builder /install /usr/local
 # 复制项目文件（.dockerignore 会过滤掉 .venv、__pycache__、logs 等）
 COPY --chown=app:app . .
 
+# 复制入口脚本（自动处理缺失/目录化的 config.json）
+COPY --chown=app:app docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 # 创建日志目录并赋权
 RUN mkdir -p logs && chown -R app:app logs
 
@@ -54,6 +58,9 @@ EXPOSE 5000
 # 健康检查（每 30 秒一次，超时 5 秒）
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -fsS http://127.0.0.1:5000/api/health || exit 1
+
+# 入口脚本：自动创建默认 config.json（如不存在或为目录）
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 # 使用 gunicorn 作为生产 WSGI 服务器
 # -w 4: 4 个 worker 进程（一般 CPU 核数 * 2 + 1）

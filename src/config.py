@@ -18,8 +18,11 @@ class Config:
         try:
             with open(abs_config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except FileNotFoundError:
-            print(f"配置文件 {abs_config_path} 未找到，使用默认配置")
+        except (FileNotFoundError, IsADirectoryError, OSError):
+            # FileNotFoundError: 文件不存在
+            # IsADirectoryError: Docker bind mount 将不存在的源文件创建为目录
+            # OSError: 其他文件系统错误（如权限问题）
+            print(f"配置文件 {abs_config_path} 无法读取，使用默认配置")
             return self._get_default_config()
         except json.JSONDecodeError:
             print(f"配置文件 {abs_config_path} 格式错误，使用默认配置")

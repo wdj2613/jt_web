@@ -15,19 +15,26 @@
 
 ### Docker Hub 镜像（推荐）
 
+容器启动时会自动创建默认 `config.json`（如未挂载或文件不存在），**开箱即用**。
+
 ```bash
 docker pull wdj2613/daily-jiongtu:latest
-# 基础启动
+# 基础启动（无需配置文件）
+docker run -d --name daily-jiongtu -p 5000:5000 \
+  -v $(pwd)/logs:/app/logs \
+  --restart unless-stopped \
+  wdj2613/daily-jiongtu:latest
+
+# 自定义配置（挂载你自己的 config.json）
 docker run -d --name daily-jiongtu -p 5000:5000 \
   -v $(pwd)/logs:/app/logs \
   -v $(pwd)/config.json:/app/config.json:ro \
   --restart unless-stopped \
   wdj2613/daily-jiongtu:latest
 
-# 启用认证并设置账号密码
+# 启用认证并设置账号密码（无需配置文件，全部用环境变量）
 docker run -d --name daily-jiongtu -p 5000:5000 \
   -v $(pwd)/logs:/app/logs \
-  -v $(pwd)/config.json:/app/config.json:ro \
   -e AUTH_ENABLED=true \
   -e AUTH_USERNAME=myuser \
   -e AUTH_PASSWORD=mypassword \
@@ -37,6 +44,7 @@ docker run -d --name daily-jiongtu -p 5000:5000 \
 ```
 
 > Windows PowerShell 下将 `$(pwd)` 替换为 `${PWD}`。
+> `config.json` 挂载是可选的 — 不挂载时容器自动使用默认配置。
 
 或使用 docker-compose（无需克隆仓库）：
 
@@ -54,6 +62,7 @@ services:
       - SECRET_KEY=your-random-secret-key
     volumes:
       - ./logs:/app/logs
+      # 自定义配置（可选，不挂载则使用默认配置）
       - ./config.json:/app/config.json:ro
     restart: unless-stopped
 ```
@@ -105,6 +114,7 @@ gunicorn -w 4 -b 0.0.0.0:5000 "src.app_factory:create_app()"
 环境变量 > config.json：`AUTH_ENABLED` `AUTH_USERNAME` `AUTH_PASSWORD` `SECRET_KEY`。
 
 Docker 中修改 `config.json` 后 `docker compose restart web` 即可，无需重建。
+如果未挂载 `config.json`，容器启动时会自动创建包含默认配置的文件。
 
 ## 数据更新
 
