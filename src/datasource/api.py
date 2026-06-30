@@ -48,8 +48,8 @@ class GamerSkyAPI:
         api_timeout = config.get("api.timeout", 30)
         if isinstance(api_timeout, (int, float)):
             self.timeout: Union[float, Tuple[float, float]] = (
-                max(3, min(10, api_timeout // 6)),   # 连接超时: 3~10 秒
-                max(10, api_timeout - 5),             # 读取超时: 至少 10 秒
+                max(3, min(8, api_timeout // 6)),    # 连接超时: 3~8 秒
+                max(8, min(15, api_timeout - 5)),     # 读取超时: 8~15 秒（不超过 gunicorn --timeout 60 的安全范围）
             )
         else:
             # 如果配置中已经是 (connect, read) 格式则直接使用

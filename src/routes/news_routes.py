@@ -175,7 +175,8 @@ def register_news_routes(app, cache=None) -> None:
         error_code = (
             result.get("errorCode", -1) if isinstance(result, dict) else -1
         )
-        return _error_response(error_message, error_code=error_code, status_code=500)
+        # 上游 API 失败时返回 200 + success:false，前端可友好显示错误而非白屏
+        return jsonify({"success": False, "error": error_message, "errorCode": error_code}), 200
 
     # -----------------------------------------------------------------
     # 文章详情
@@ -228,7 +229,8 @@ def register_news_routes(app, cache=None) -> None:
         error_code = (
             result.get("errorCode", -1) if isinstance(result, dict) else -1
         )
-        return _error_response(error_message, error_code=error_code, status_code=500)
+        # 上游 API 失败时返回 200 + success:false
+        return jsonify({"success": False, "error": error_message, "errorCode": error_code}), 200
 
     # -----------------------------------------------------------------
     # 首页

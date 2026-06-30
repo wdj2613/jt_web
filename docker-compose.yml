@@ -17,6 +17,7 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - PYTHONUNBUFFERED=1
+      - SECRET_KEY=ae5d6ec8c1a6378079dea53224ebbec4eddac13c9b7004a32f560b40a97f5b18
     volumes:
       # 持久化日志（容器重启不丢失）
       - ./logs:/app/logs
