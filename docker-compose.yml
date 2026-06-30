@@ -1,0 +1,60 @@
+# 每日囧图 - Docker Compose 配置
+#
+# 使用方式：
+#   生产环境：docker compose up -d --build
+#   开发环境（热重载，挂载源码）：docker compose --profile dev up -d --build
+#
+# 查看日志：docker compose logs -f
+# 停止：docker compose down
+
+services:
+  web:
+    build: .
+    image: daily-jiongtu:latest
+    container_name: daily-jiongtu
+    ports:
+      - "5000:5000"
+    environment:
+      - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # 持久化日志（容器重启不丢失）
+      - ./logs:/app/logs
+      # 持久化配置（修改 config.json 无需重新构建镜像）
+      - ./config.json:/app/config.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - jt_web_network
+
+  # 开发环境（可选，使用 --profile dev 启用）
+  # 启动方式：docker compose --profile dev up -d --build
+  web-dev:
+    profiles: ["dev"]
+    build: .
+    image: daily-jiongtu:dev
+    container_name: daily-jiongtu-dev
+    ports:
+      - "5001:5000"
+    environment:
+      - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+    volumes:
+      # 挂载全部源码，支持热重载
+      - .:/app
+      - /app/.venv
+      - /app/__pycache__
+    command: ["python", "app.py"]
+    restart: unless-stopped
+    networks:
+      - jt_web_network
+
+networks:
+  jt_web_network:
+    driver: bridge

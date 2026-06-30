@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#2365d1">
+  <meta name="description" content="每日囧图 - 流畅浏览动态图与囧图专栏">
+  <title>每日囧图</title>
+
+  <!-- 字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Material Design 3 样式 -->
+  <link rel="stylesheet" href="/static/css/md3-styles.css">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- 本地图片错误处理 -->
+  <script src="/static/js/image-placeholder.js"></script>
+</head>
+<body class="md3-body" id="app">
+  <div id="vue-app" v-cloak>
+    <!-- 侧边栏 -->
+    <aside :class="{'open': sidebarOpen}"
+           class="md3-sidebar"
+           role="dialog"
+           aria-modal="false"
+           aria-label="导航菜单">
+      <!-- 品牌区 -->
+      <div class="md3-sidebar-brand">
+        <div class="md3-sidebar-brand-icon">MJ</div>
+        <div class="md3-sidebar-brand-text">
+          <span class="md3-sidebar-brand-name">每日囧图</span>
+          <span class="md3-sidebar-brand-tag">动态图 · 囧图专栏</span>
+        </div>
+        <button @click="toggleSidebar" class="md3-icon-button ml-auto" aria-label="关闭菜单">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- 栏目导航 -->
+      <nav class="md3-sidebar-nav" aria-label="栏目选择">
+        <div class="md3-sidebar-section-label">栏目</div>
+        <a href="#"
+           v-for="cat in categories"
+           :key="cat.name"
+           @click.prevent="changeCategory(cat.name)"
+           :class="{'md3-nav-item-active': currentCategory === cat.name}"
+           class="md3-nav-item">
+          <span class="md3-nav-item-icon" v-html="cat.icon"></span>
+          <span class="md3-nav-item-label">{{ cat.name }}</span>
+          <span v-if="currentCategory === cat.name" class="md3-nav-item-badge">当前</span>
+        </a>
+
+        <div class="md3-sidebar-section-label">操作</div>
+        <a href="#"
+           @click.prevent="goHome"
+           class="md3-nav-item">
+          <span class="md3-nav-item-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </span>
+          <span class="md3-nav-item-label">返回首页</span>
+        </a>
+        <a href="#"
+           @click.prevent="toggleTheme"
+           class="md3-nav-item">
+          <span class="md3-nav-item-icon">
+            <svg v-if="!darkMode" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </span>
+          <span class="md3-nav-item-label">{{ darkMode ? '切换日间' : '切换夜间' }}</span>
+        </a>
+        <a href="#"
+           @click.prevent="clearReadHistory"
+           class="md3-nav-item">
+          <span class="md3-nav-item-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </span>
+          <span class="md3-nav-item-label">清空已读记录</span>
+          <span v-if="readArticleIds.size > 0" class="md3-nav-item-badge">{{ readArticleIds.size }}</span>
+        </a>
+      </nav>
+
+      <div class="md3-sidebar-footer">
+        <div>轻量级 Flask + Vue 3 实现</div>
+        <div style="margin-top:4px;opacity:0.7;">本站内容每日自动同步上游更新</div>
+      </div>
+    </aside>
+
+    <!-- 遮罩层 -->
+    <transition name="fade">
+      <div v-if="sidebarOpen" @click="toggleSidebar" class="md3-overlay show" aria-hidden="true"></div>
+    </transition>
+
+    <!-- 主容器 -->
+    <div class="md3-app-shell">
+      <!-- 头部 -->
+      <header class="sticky top-0 z-30 md3-header p-4 flex items-center gap-3">
+        <button @click="toggleSidebar" class="md3-menu-button" aria-label="打开菜单">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 class="text-base sm:text-xl font-bold flex-1 text-center md3-on-surface truncate">
+          每日囧图 · <span class="md3-primary">{{ currentCategory }}</span>
+        </h1>
+        <button @click="refreshList" class="md3-refresh-button" aria-label="刷新当前栏目" title="刷新当前栏目" :disabled="loading || refreshing">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{'animate-spin-slow': refreshing}">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+        <button @click="toggleTheme" class="md3-theme-toggle" aria-label="切换主题">
+          <svg v-if="!darkMode" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
+      </header>
+
+      <!-- 主内容区 -->
+      <main class="md3-main" ref="mainContent">
+        <!-- 加载骨架屏（首次加载） -->
+        <div v-if="loading && articles.length === 0" class="md3-skeleton-grid">
+          <div v-for="n in 6" :key="'sk-'+n" class="md3-skeleton-card">
+            <div class="md3-skeleton-image"></div>
+            <div class="md3-skeleton-body">
+              <div class="md3-skeleton-line long"></div>
+              <div class="md3-skeleton-line medium"></div>
+              <div class="md3-skeleton-line short"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 错误信息 -->
+        <div v-if="error && !loading" class="md3-error-message">
+          <span>{{ error }}</span>
+          <button @click="retryLastAction" class="md3-error-retry">重试</button>
+        </div>
+
+        <!-- 文章列表 -->
+        <transition-group v-if="!currentArticle && !loading" name="fade" tag="div" class="md3-card-grid">
+          <div v-for="article in articles" :key="article.id"
+               @click="viewArticle(article.id)"
+               :class="isArticleRead(article.id) ? 'md3-article-card is-read' : 'md3-article-card is-unread'">
+
+            <!-- 缩略图区域 -->
+            <div v-if="getAllThumbnails(article).length > 0" class="article-image">
+              <div v-if="getAllThumbnails(article).length === 1" class="single-image" style="height:100%;">
+                <img :src="getAllThumbnails(article)[0]" :alt="article.title"
+                     @error="handleImageError"
+                     referrerpolicy="no-referrer"
+                     loading="lazy">
+              </div>
+              <div v-else class="multiple-images">
+                <div v-for="(thumb, index) in getAllThumbnails(article).slice(0, 3)" :key="index" class="thumbnail-item">
+                  <img :src="thumb" :alt="article.title + ' 缩略图' + (index+1)"
+                       @error="handleImageError"
+                       referrerpolicy="no-referrer"
+                       loading="lazy">
+                </div>
+              </div>
+              <span v-if="getAllThumbnails(article).length > 1" class="md3-image-count-badge">
+                {{ getAllThumbnails(article).length }} 张
+              </span>
+            </div>
+
+            <!-- 文章信息 -->
+            <div class="md3-card-content">
+              <div class="md3-card-status-row">
+                <span v-if="isArticleRead(article.id)" class="md3-read-chip">已读</span>
+                <span v-else class="md3-unread-chip">未读</span>
+              </div>
+              <h3 class="md3-article-title">{{ article.title }}</h3>
+              <div class="md3-article-time">
+                {{ formatDate(article.updateTime) }}
+              </div>
+            </div>
+          </div>
+        </transition-group>
+
+        <!-- 文章详情页 -->
+        <div v-if="currentArticle" class="md3-detail-page md3-reveal" ref="detailPage">
+          <button @click="goBackToList" class="md3-back-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            返回列表
+          </button>
+
+          <div class="md3-detail-header">
+            <h1 class="md3-detail-title">{{ currentArticle.title }}</h1>
+            <div v-if="currentArticle.subtitle" class="md3-detail-subtitle">
+              {{ currentArticle.subtitle }}
+            </div>
+            <div class="md3-detail-meta">
+              <span class="md3-meta-item">作者: {{ currentArticle.author || '未知' }}</span>
+              <span class="md3-meta-item">发布时间: {{ formatDate(currentArticle.updateTime) }}</span>
+              <span class="md3-meta-item">来源: {{ currentArticle.copyFrom || '网络整理' }}</span>
+            </div>
+          </div>
+
+          <div v-if="detailLoading" class="md3-loading">
+            <div class="md3-spinner"></div>
+            <p>正在加载文章内容...</p>
+          </div>
+          <div v-else class="md3-detail-content"
+               v-html="processedContentHtml">
+          </div>
+        </div>
+
+        <!-- 详情页加载错误 -->
+        <div v-if="currentArticle && error" class="md3-error-message" style="margin-top:16px;">
+          <span>{{ error }}</span>
+          <button @click="retryLastAction" class="md3-error-retry">重试</button>
+        </div>
+
+        <!-- 加载更多按钮 -->
+        <div v-if="!currentArticle && articles.length > 0 && hasMore" class="md3-load-more-wrap">
+          <button @click="loadMore"
+                  :disabled="loadingMore"
+                  class="md3-load-more-button">
+            <span v-if="!loadingMore">加载更多</span>
+            <span v-else>加载中...</span>
+          </button>
+        </div>
+
+        <!-- 没有更多数据 -->
+        <div v-if="!currentArticle && articles.length > 0 && !hasMore && !loading"
+             class="text-center text-sm md3-on-surface-variant" style="margin-top:24px;">
+          已经到底啦 ~
+        </div>
+      </main>
+    </div>
+
+    <!-- 返回顶部 -->
+    <button v-if="showBackToTop" @click="scrollToTop"
+            class="md3-back-to-top visible"
+            aria-label="返回顶部">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    const { createApp, ref, onMounted, onBeforeUnmount, watch, nextTick } = Vue;
+
+    createApp({
+      setup() {
+        // ============================================================
+        // 状态
+        // ============================================================
+        const articles = ref([]);
+        const currentArticle = ref(null);
+        const loading = ref(false);
+        const detailLoading = ref(false);
+        const loadingMore = ref(false);
+        const error = ref('');
+        const currentCategory = ref('囧图');
+        const currentPage = ref(1);
+        const hasMore = ref(true);
+        const sidebarOpen = ref(false);
+        const darkMode = ref(false);
+        const processedContentHtml = ref('');
+        const readArticleIds = ref(new Set());
+        const showBackToTop = ref(false);
+        const refreshing = ref(false);
+        const lastUpdated = ref(null); // 上游数据最后更新时间
+
+        const READ_STORAGE_KEY = 'jt_web_read_articles_v1';
+        const MAX_READ_ARTICLES = 3000;
+
+        // ============================================================
+        // 滚动位置记忆（按栏目分别保存）
+        // ============================================================
+        const SCROLL_STORAGE_KEY = 'jt_web_scroll_positions_v1';
+        // 内存中保存当前会话每个栏目的滚动位置与已加载的文章/页码
+        const scrollMemory = {};
+        // 标志位：返回列表时是否需要恢复滚动位置（避免初始化和切换栏目时也触发）
+        let shouldRestoreScroll = false;
+        let pendingScrollTop = 0;
+        // 标志位：正在恢复滚动位置，期间禁止 handleScroll 覆盖内存
+        let isRestoringScroll = false;
+
+        const saveScrollPosition = (category) => {
+          if (!category) return;
+          const y = window.scrollY || window.pageYOffset || 0;
+          scrollMemory[category] = {
+            scrollTop: y,
+            articles: articles.value.slice(),
+            currentPage: currentPage.value,
+            hasMore: hasMore.value,
+            savedAt: Date.now()
+          };
+          // 同时持久化到 sessionStorage，刷新页面后仍可恢复
+          try {
+            sessionStorage.setItem(
+              SCROLL_STORAGE_KEY,
+              JSON.stringify(scrollMemory)
+            );
+          } catch (e) { /* ignore */ }
+        };
+
+        const loadScrollMemory = () => {
+          try {
+            const raw = sessionStorage.getItem(SCROLL_STORAGE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+              Object.assign(scrollMemory, parsed);
+            }
+          } catch (e) { /* ignore */ }
+        };
+
+        const restoreScrollPosition = (category) => {
+          const mem = scrollMemory[category];
+          if (!mem || typeof mem.scrollTop !== 'number') {
+            window.scrollTo({ top: 0, behavior: 'auto' });
+            return;
+          }
+          const target = mem.scrollTop;
+          // 设置标志位，防止 handleScroll 在恢复期间覆盖内存
+          isRestoringScroll = true;
+          // 多次尝试恢复，确保 DOM 完全渲染后能正确滚动
+          const attemptScroll = (attemptsLeft) => {
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            const safe = Math.max(0, Math.min(target, maxScroll));
+            window.scrollTo({ top: safe, behavior: 'auto' });
+            if (attemptsLeft > 0 && Math.abs(window.scrollY - safe) > 5) {
+              requestAnimationFrame(() => attemptScroll(attemptsLeft - 1));
+            } else {
+              // 解除标志位
+              requestAnimationFrame(() => {
+                isRestoringScroll = false;
+              });
+            }
+          };
+          // 先等 DOM 渲染
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              attemptScroll(3);
+            });
+          });
+        };
+
+        const clearScrollMemoryForCategory = (category) => {
+          if (!category) return;
+          delete scrollMemory[category];
+          try {
+            sessionStorage.setItem(
+              SCROLL_STORAGE_KEY,
+              JSON.stringify(scrollMemory)
+            );
+          } catch (e) { /* ignore */ }
+        };
+
+        // 栏目配置（带 SVG 图标）
+        const categories = [
+          {
+            name: '动态图',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>'
+          },
+          {
+            name: '囧图',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>'
+          }
+        ];
+
+        // ============================================================
+        // 已读记录管理
+        // ============================================================
+        const normalizeReadIds = (sourceIds) => {
+          const unique = [];
+          const seen = new Set();
+          sourceIds.forEach((item) => {
+            const parsed = Number.parseInt(item, 10);
+            if (!Number.isInteger(parsed) || parsed <= 0 || seen.has(parsed)) return;
+            seen.add(parsed);
+            unique.push(parsed);
+          });
+          return unique.slice(0, MAX_READ_ARTICLES);
+        };
+
+        const saveReadArticleIds = (idsToStore = Array.from(readArticleIds.value)) => {
+          try {
+            const normalized = normalizeReadIds(idsToStore);
+            localStorage.setItem(READ_STORAGE_KEY, JSON.stringify({
+              items: normalized,
+              updatedAt: Date.now()
+            }));
+          } catch (storageError) {
+            console.warn('保存已读记录失败:', storageError);
+          }
+        };
+
+        const loadReadArticleIds = () => {
+          try {
+            const raw = localStorage.getItem(READ_STORAGE_KEY);
+            if (!raw) {
+              readArticleIds.value = new Set();
+              return;
+            }
+            const parsed = JSON.parse(raw);
+            const items = Array.isArray(parsed?.items) ? parsed.items : [];
+            const normalized = normalizeReadIds(items);
+            readArticleIds.value = new Set(normalized);
+            if (normalized.length !== items.length) {
+              saveReadArticleIds(normalized);
+            }
+          } catch (storageError) {
+            console.warn('读取已读记录失败:', storageError);
+            readArticleIds.value = new Set();
+          }
+        };
+
+        const markArticleAsRead = (articleId) => {
+          const parsed = Number.parseInt(articleId, 10);
+          if (!Number.isInteger(parsed) || parsed <= 0) return;
+          const existing = Array.from(readArticleIds.value).filter((id) => id !== parsed);
+          const next = [parsed, ...existing].slice(0, MAX_READ_ARTICLES);
+          readArticleIds.value = new Set(next);
+          saveReadArticleIds(next);
+        };
+
+        const clearReadHistory = () => {
+          if (readArticleIds.value.size === 0) {
+            closeSidebarIfMobile();
+            return;
+          }
+          if (!window.confirm('确定要清空所有已读记录吗？')) return;
+          readArticleIds.value = new Set();
+          try { localStorage.removeItem(READ_STORAGE_KEY); } catch (e) { /* ignore */ }
+          closeSidebarIfMobile();
+        };
+
+        const isArticleRead = (articleId) => {
+          const parsed = Number.parseInt(articleId, 10);
+          return Number.isInteger(parsed) && readArticleIds.value.has(parsed);
+        };
+
+        // ============================================================
+        // 路由 / URL 状态
+        // ============================================================
+        const API_BASE_URL = '/api';
+        let lastAction = null; // 记录上次失败的请求，用于重试
+
+        const parseURLState = () => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const category = urlParams.get('category') || '囧图';
+          const rawArticleId = urlParams.get('articleId');
+          const parsedArticleId = rawArticleId ? Number.parseInt(rawArticleId, 10) : null;
+          const articleId = Number.isInteger(parsedArticleId) && parsedArticleId > 0 ? parsedArticleId : null;
+          return { category, articleId };
+        };
+
+        const updateURL = (category, articleId = null) => {
+          const params = new URLSearchParams();
+          params.set('category', category);
+          if (articleId) params.set('articleId', articleId);
+          const newURL = `${window.location.pathname}?${params.toString()}`;
+          window.history.pushState({ category, articleId }, '', newURL);
+        };
+
+        const replaceURL = (category, articleId = null) => {
+          const params = new URLSearchParams();
+          params.set('category', category);
+          if (articleId) params.set('articleId', articleId);
+          const newURL = `${window.location.pathname}?${params.toString()}`;
+          window.history.replaceState({ category, articleId }, '', newURL);
+        };
+
+        const handlePopState = async (event) => {
+          const state = event.state || parseURLState();
+          const category = state.category || '囧图';
+          const articleId = state.articleId ? Number.parseInt(state.articleId, 10) : null;
+
+          if (articleId) {
+            currentCategory.value = category;
+            await viewArticle(articleId, false);
+          } else {
+            // 从详情页返回到列表页：标记需要恢复滚动位置
+            if (currentArticle.value !== null) {
+              shouldRestoreScroll = true;
+            }
+            currentArticle.value = null;
+            processedContentHtml.value = '';
+            if (currentCategory.value !== category) {
+              // 切换到另一个栏目：从内存中恢复该栏目的列表与滚动位置
+              currentCategory.value = category;
+              const mem = scrollMemory[category];
+              if (mem && mem.articles && mem.articles.length > 0) {
+                articles.value = mem.articles.slice();
+                currentPage.value = mem.currentPage;
+                hasMore.value = mem.hasMore;
+                shouldRestoreScroll = true;
+                nextTick(() => restoreScrollPosition(category));
+              } else {
+                await loadArticles(true);
+              }
+            } else {
+              // 同栏目从详情返回：恢复滚动
+              shouldRestoreScroll = true;
+              nextTick(() => restoreScrollPosition(category));
+            }
+          }
+        };
+
+        // ============================================================
+        // 数据加载
+        // ============================================================
+        const getAllThumbnails = (article) => {
+          const thumbs = [];
+          if (article.thumbnail) thumbs.push(article.thumbnail);
+          if (article.thumbnails && Array.isArray(article.thumbnails)) {
+            thumbs.push(...article.thumbnails);
+          }
+          return [...new Set(thumbs)].slice(0, 9);
+        };
+
+        const formatDate = (dateString) => {
+          if (!dateString) return '';
+          // 已经是 YYYY-MM-DD 格式
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) return dateString;
+          return date.toLocaleDateString('zh-CN');
+        };
+
+        const handleImageError = (e) => {
+          // 修复：传入元素而不是事件对象
+          window.vueHandleImageError(e?.target || e);
+        };
+
+        // 切换侧边栏
+        const toggleSidebar = () => {
+          sidebarOpen.value = !sidebarOpen.value;
+        };
+
+        const closeSidebarIfMobile = () => {
+          if (window.matchMedia('(max-width: 900px)').matches) {
+            sidebarOpen.value = false;
+          }
+        };
+
+        // 切换主题（修复：仅依赖 Vue 绑定的 data-theme）
+        const toggleTheme = () => {
+          darkMode.value = !darkMode.value;
+          try {
+            localStorage.setItem('theme', darkMode.value ? 'dark' : 'light');
+          } catch (e) { /* ignore */ }
+        };
+
+        const checkThemePreference = () => {
+          let savedTheme = null;
+          try { savedTheme = localStorage.getItem('theme'); } catch (e) { /* ignore */ }
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          darkMode.value = savedTheme === 'dark' || (!savedTheme && prefersDark);
+        };
+
+        // 监听系统主题变化（用户未手动设置时跟随）
+        const handleSystemThemeChange = (e) => {
+          let savedTheme = null;
+          try { savedTheme = localStorage.getItem('theme'); } catch (err) { /* ignore */ }
+          if (!savedTheme) {
+            darkMode.value = e.matches;
+          }
+        };
+
+        // 更改分类
+        const changeCategory = async (category, syncHistory = true) => {
+          // 关闭侧边栏（移动端体验）
+          closeSidebarIfMobile();
+
+          // 如果当前在详情页，先返回列表（不需要恢复滚动，因为要切栏目）
+          if (currentArticle.value !== null) {
+            currentArticle.value = null;
+            processedContentHtml.value = '';
+          }
+
+          // 分类相同且已在列表页，无需重复加载
+          if (currentCategory.value === category && currentArticle.value === null && articles.value.length > 0) {
+            return;
+          }
+
+          // 切换栏目前，先把当前栏目的滚动位置与列表显式保存到内存+sessionStorage
+          // 这样切回来才能恢复
+          if (currentCategory.value !== category) {
+            saveScrollPosition(currentCategory.value);
+          }
+
+          // 切换栏目：从内存中尝试恢复（这样切回来时还能看到之前的位置）
+          currentCategory.value = category;
+          const mem = scrollMemory[category];
+          if (mem && mem.articles && mem.articles.length > 0) {
+            // 使用缓存的列表数据，避免重新请求
+            // 先标记正在恢复，防止 handleScroll 覆盖内存
+            isRestoringScroll = true;
+            articles.value = mem.articles.slice();
+            currentPage.value = mem.currentPage;
+            hasMore.value = mem.hasMore;
+            error.value = '';
+            if (syncHistory) updateURL(category);
+            // 等下一帧 DOM 渲染完成后恢复滚动位置
+            nextTick(() => {
+              restoreScrollPosition(category);
+            });
+            return;
+          }
+
+          // 没有缓存，重新加载
+          currentPage.value = 1;
+          articles.value = [];
+          hasMore.value = true;
+          error.value = '';
+          await loadArticles(true);
+
+          if (syncHistory) {
+            updateURL(category);
+          }
+
+          // 新栏目首次加载，滚动到顶部
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // 加载文章列表
+        const loadArticles = async (reset = false) => {
+          if (reset) {
+            loading.value = true;
+          } else {
+            loadingMore.value = true;
+          }
+          error.value = '';
+
+          const action = async () => {
+            const response = await fetch(API_BASE_URL + '/news/list', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              referrerPolicy: 'no-referrer',
+              body: JSON.stringify({
+                app: "GSAPP",
+                deviceType: "M2006J10C",
+                appVersion: "5.13.61",
+                os: "android",
+                osVersion: "11",
+                deviceId: "4034c60353b640dbaf408ee71f1d68a2",
+                request: {
+                  modelFieldNames: "Title,Author,ThumbnailsPicUrl,updateTime,mark,contentId",
+                  tagIds: "",
+                  pageSize: 20,
+                  cacheMinutes: 1,
+                  tags: currentCategory.value,
+                  recommendedIndex: 0,
+                  nodeIds: "",
+                  systemFieldNames: "DefaultPicUrl",
+                  pageIndex: currentPage.value,
+                  UpdateTime: 0,
+                  topicIds: "",
+                  GameLib: "0",
+                  order: "timeDesc"
+                }
+              })
+            });
+
+            if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error || '获取数据失败');
+
+            if (reset) {
+              articles.value = data.data || [];
+            } else {
+              const newItems = data.data || [];
+              // 去重
+              const existingIds = new Set(articles.value.map(a => a.id));
+              const filtered = newItems.filter(a => !existingIds.has(a.id));
+              articles.value = [...articles.value, ...filtered];
+            }
+            hasMore.value = data.page_info?.has_more || false;
+          };
+
+          lastAction = action;
+
+          try {
+            await action();
+          } catch (err) {
+            console.error('加载文章失败:', err);
+            error.value = '加载失败: ' + err.message;
+          } finally {
+            if (reset) loading.value = false;
+            else loadingMore.value = false;
+          }
+        };
+
+        // 查看文章详情
+        const viewArticle = async (articleId, syncHistory = true) => {
+          // 进入详情前，先保存当前栏目的列表与滚动位置
+          saveScrollPosition(currentCategory.value);
+
+          loading.value = true;
+          detailLoading.value = true;
+          error.value = '';
+
+          const action = async () => {
+            const response = await fetch(API_BASE_URL + '/article/detail', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              referrerPolicy: 'no-referrer',
+              body: JSON.stringify({
+                app: "GSAPP",
+                deviceType: "M2006J10C",
+                appVersion: "5.13.61",
+                os: "android",
+                osVersion: "11",
+                deviceId: "4034c60353b640dbaf408ee71f1d68a2",
+                request: {
+                  extraFiledNames: "",
+                  modelFieldNames: "Tag,Tag_Index,pageNames,Title,Subheading,Author,pcPageURL,CopyFrom,UpdateTime,DefaultPicUrl,GameScore,GameLib,TitleIntact,NodeId,editor,AudioUrl,AudioDuration,Content_Index",
+                  articleId: articleId,
+                  appModelFieldNames: "",
+                  cacheMinutes: 10
+                }
+              })
+            });
+
+            if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error || '获取文章详情失败');
+
+            currentArticle.value = data.data;
+            // 同步上游返回的 updateTime 作为最近更新时间
+            if (data.data && data.data.updateTime) {
+              lastUpdated.value = data.data.updateTime;
+            }
+            markArticleAsRead(articleId);
+            if (syncHistory) {
+              updateURL(currentCategory.value, articleId);
+            }
+            // 进入详情页，滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'auto' });
+          };
+
+          lastAction = action;
+
+          try {
+            await action();
+          } catch (err) {
+            console.error('加载文章详情失败:', err);
+            error.value = '加载失败: ' + err.message;
+          } finally {
+            loading.value = false;
+            detailLoading.value = false;
+          }
+        };
+
+        // 重试上次失败的请求
+        const retryLastAction = async () => {
+          if (!lastAction) return;
+          error.value = '';
+          try {
+            await lastAction();
+          } catch (err) {
+            error.value = '重试失败: ' + err.message;
+          }
+        };
+
+        // 返回列表（从详情页返回，需恢复滚动位置）
+        const goBackToList = () => {
+          currentArticle.value = null;
+          processedContentHtml.value = '';
+          error.value = '';
+          replaceURL(currentCategory.value);
+          // 标记需要恢复滚动位置
+          shouldRestoreScroll = true;
+          nextTick(() => restoreScrollPosition(currentCategory.value));
+        };
+
+        // 返回首页（关闭详情，回到当前栏目列表顶部；不恢复滚动，强制置顶）
+        const goHome = () => {
+          closeSidebarIfMobile();
+          if (currentArticle.value) {
+            currentArticle.value = null;
+            processedContentHtml.value = '';
+            error.value = '';
+            replaceURL(currentCategory.value);
+          }
+          // 清除该栏目的滚动记忆，回到顶部
+          clearScrollMemoryForCategory(currentCategory.value);
+          shouldRestoreScroll = false;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // 手动刷新当前栏目：清空缓存并重新拉取，但不影响滚动位置记忆
+        const refreshList = async () => {
+          if (refreshing.value || loading.value) return;
+          refreshing.value = true;
+          error.value = '';
+          try {
+            // 通知后端清空对应栏目的缓存
+            await fetch(API_BASE_URL + '/refresh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                scope: 'news_list',
+                category: currentCategory.value
+              })
+            }).catch(() => { /* 即使后端不支持也继续 */ });
+
+            // 重新加载第 1 页
+            currentPage.value = 1;
+            const previousArticleCount = articles.value.length;
+            await loadArticles(true);
+            // 刷新后保留当前滚动位置（如果之前在加载更多，回到列表顶部更合理）
+            if (previousArticleCount === 0) {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            // 清除该栏目的旧滚动记忆，避免与新列表错位
+            delete scrollMemory[currentCategory.value];
+            try {
+              sessionStorage.setItem(SCROLL_STORAGE_KEY, JSON.stringify(scrollMemory));
+            } catch (e) { /* ignore */ }
+            lastUpdated.value = new Date().toISOString().slice(0, 10);
+          } catch (err) {
+            error.value = '刷新失败: ' + err.message;
+          } finally {
+            refreshing.value = false;
+          }
+        };
+
+        // 加载更多
+        const loadMore = async () => {
+          currentPage.value++;
+          await loadArticles(false);
+          // 加载更多后保存滚动位置，方便切回来仍在原位置
+          // 注意：不在此处保存，因为用户可能继续向下滚动；
+          // 仅在进入详情页时才保存
+        };
+
+        // 返回顶部
+        const scrollToTop = () => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // 滚动监听（控制返回顶部按钮）
+        const handleScroll = () => {
+          showBackToTop.value = window.scrollY > 400;
+          // 在列表页滚动时，实时记录到内存（不入 sessionStorage，避免频繁 IO）
+          // 跳过：详情页、加载中、正在恢复滚动位置
+          if (!currentArticle.value && !loading.value && !isRestoringScroll) {
+            if (!scrollMemory[currentCategory.value]) {
+              scrollMemory[currentCategory.value] = {
+                scrollTop: 0,
+                articles: [],
+                currentPage: 1,
+                hasMore: true,
+                savedAt: Date.now()
+              };
+            }
+            const mem = scrollMemory[currentCategory.value];
+            mem.scrollTop = window.scrollY;
+            mem.articles = articles.value.slice();
+            mem.currentPage = currentPage.value;
+            mem.hasMore = hasMore.value;
+            mem.savedAt = Date.now();
+          }
+        };
+
+        // ============================================================
+        // 键盘 / 手势
+        // ============================================================
+        const handleKeydown = (e) => {
+          // ESC 关闭侧边栏或返回列表
+          if (e.key === 'Escape') {
+            if (sidebarOpen.value) {
+              sidebarOpen.value = false;
+            } else if (currentArticle.value) {
+              goBackToList();
+            }
+          }
+          // Alt+1 / Alt+2 切换栏目
+          if (e.altKey && (e.key === '1' || e.key === '2')) {
+            e.preventDefault();
+            const idx = parseInt(e.key, 10) - 1;
+            if (categories[idx]) changeCategory(categories[idx].name);
+          }
+        };
+
+        // 触摸滑动返回（仅详情页）
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isSwiping = false;
+        let swipeDistance = 0;
+        let swipeElement = null;
+
+        const handleTouchStart = (event) => {
+          if (currentArticle.value === null) return;
+          // 只在屏幕左侧 30% 区域启用
+          if (event.touches[0].clientX > window.innerWidth * 0.3) return;
+          touchStartX = event.touches[0].clientX;
+          touchStartY = event.touches[0].clientY;
+          isSwiping = true;
+          swipeDistance = 0;
+          swipeElement = document.querySelector('.md3-detail-page');
+        };
+
+        const handleTouchMove = (event) => {
+          if (!isSwiping || !swipeElement) return;
+          const touch = event.touches[0];
+          const deltaX = touch.clientX - touchStartX;
+          const deltaY = touch.clientY - touchStartY;
+
+          if (Math.abs(deltaY) > Math.abs(deltaX) * 0.5) {
+            isSwiping = false;
+            resetSwipeStyle();
+            return;
+          }
+
+          if (deltaX > 0) {
+            swipeDistance = Math.min(deltaX, window.innerWidth * 0.6);
+            swipeElement.style.transform = `translateX(${swipeDistance}px)`;
+            swipeElement.style.transition = 'none';
+            swipeElement.style.opacity = String(1 - swipeDistance / window.innerWidth * 0.4);
+          } else {
+            swipeDistance = 0;
+            resetSwipeStyle();
+          }
+        };
+
+        const handleTouchEnd = () => {
+          if (!isSwiping) return;
+          isSwiping = false;
+          if (swipeDistance > window.innerWidth * 0.3) {
+            // 触发返回（goBackToList 会自动恢复滚动位置）
+            if (swipeElement) {
+              swipeElement.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+              swipeElement.style.transform = `translateX(${window.innerWidth}px)`;
+              swipeElement.style.opacity = '0';
+            }
+            setTimeout(() => {
+              goBackToList();
+              setTimeout(resetSwipeStyle, 50);
+            }, 250);
+          } else {
+            resetSwipeStyle();
+          }
+        };
+
+        const resetSwipeStyle = () => {
+          if (swipeElement) {
+            swipeElement.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+            swipeElement.style.transform = 'translateX(0px)';
+            swipeElement.style.opacity = '1';
+            setTimeout(() => {
+              if (swipeElement) {
+                swipeElement.style.transition = '';
+              }
+            }, 250);
+          }
+          swipeDistance = 0;
+        };
+
+        // ============================================================
+        // HTML 内容处理
+        // ============================================================
+        const sanitizeAndProcessHTML = (htmlString) => {
+          if (!htmlString) return '';
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = htmlString;
+
+          // 给所有图片添加安全属性与懒加载
+          const images = tempDiv.querySelectorAll('img');
+          images.forEach(img => {
+            img.setAttribute('referrerpolicy', 'no-referrer');
+            if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
+            img.onerror = function() { window.handleImageError(this); };
+          });
+
+          // 给所有外链 a 添加安全属性
+          const links = tempDiv.querySelectorAll('a');
+          links.forEach(a => {
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener noreferrer');
+          });
+
+          return tempDiv.innerHTML;
+        };
+
+        // ============================================================
+        // 生命周期
+        // ============================================================
+        let mediaQueryList = null;
+
+        onMounted(async () => {
+          checkThemePreference();
+          loadReadArticleIds();
+          loadScrollMemory();
+
+          window.addEventListener('popstate', handlePopState);
+          window.addEventListener('keydown', handleKeydown);
+          window.addEventListener('scroll', handleScroll, { passive: true });
+          // 页面卸载前保存最后一次滚动位置
+          window.addEventListener('beforeunload', () => {
+            if (!currentArticle.value) {
+              saveScrollPosition(currentCategory.value);
+            }
+          });
+
+          document.addEventListener('touchstart', handleTouchStart, { passive: true });
+          document.addEventListener('touchmove', handleTouchMove, { passive: true });
+          document.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+          // 监听系统主题变化
+          if (window.matchMedia) {
+            mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
+            if (mediaQueryList.addEventListener) {
+              mediaQueryList.addEventListener('change', handleSystemThemeChange);
+            } else if (mediaQueryList.addListener) {
+              mediaQueryList.addListener(handleSystemThemeChange);
+            }
+          }
+
+          const initialState = parseURLState();
+          currentCategory.value = initialState.category;
+          replaceURL(initialState.category, initialState.articleId);
+
+          if (initialState.articleId) {
+            // 深链进入详情页：先加载列表数据（后台静默）
+            // 这样返回时可以立即看到列表，并恢复滚动
+            const mem = scrollMemory[initialState.category];
+            if (mem && mem.articles && mem.articles.length > 0) {
+              articles.value = mem.articles.slice();
+              currentPage.value = mem.currentPage;
+              hasMore.value = mem.hasMore;
+            } else {
+              // 后台静默加载列表，不阻塞详情显示
+              loadArticles(true).catch(() => { /* ignore */ });
+            }
+            await viewArticle(initialState.articleId, false);
+          } else {
+            // 直接进入列表页：尝试恢复滚动位置
+            const mem = scrollMemory[initialState.category];
+            if (mem && mem.articles && mem.articles.length > 0) {
+              articles.value = mem.articles.slice();
+              currentPage.value = mem.currentPage;
+              hasMore.value = mem.hasMore;
+              shouldRestoreScroll = true;
+              nextTick(() => restoreScrollPosition(initialState.category));
+            } else {
+              await loadArticles(true);
+            }
+          }
+        });
+
+        onBeforeUnmount(() => {
+          window.removeEventListener('popstate', handlePopState);
+          window.removeEventListener('keydown', handleKeydown);
+          window.removeEventListener('scroll', handleScroll);
+          document.removeEventListener('touchstart', handleTouchStart);
+          document.removeEventListener('touchmove', handleTouchMove);
+          document.removeEventListener('touchend', handleTouchEnd);
+          if (mediaQueryList) {
+            if (mediaQueryList.removeEventListener) {
+              mediaQueryList.removeEventListener('change', handleSystemThemeChange);
+            } else if (mediaQueryList.removeListener) {
+              mediaQueryList.removeListener(handleSystemThemeChange);
+            }
+          }
+        });
+
+        // 监听 currentArticle 变化，渲染 HTML
+        watch(() => currentArticle.value, (newArticle) => {
+          if (newArticle && newArticle.content_html) {
+            processedContentHtml.value = sanitizeAndProcessHTML(newArticle.content_html);
+          } else {
+            processedContentHtml.value = '';
+          }
+        }, { immediate: true });
+
+        // 监听 sidebarOpen 控制 body 滚动锁定与 class
+        watch(sidebarOpen, (open) => {
+          if (open) {
+            document.body.classList.add('sidebar-open');
+          } else {
+            document.body.classList.remove('sidebar-open');
+          }
+        });
+
+        // 监听 darkMode，同步 body data-theme 与 theme-color
+        watch(darkMode, (isDark) => {
+          document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+          if (themeColorMeta) {
+            themeColorMeta.setAttribute('content', isDark ? '#101725' : '#2365d1');
+          }
+        }, { immediate: true });
+
+        // ============================================================
+        // 返回模板可用项
+        // ============================================================
+        return {
+          // 状态
+          articles,
+          currentArticle,
+          loading,
+          detailLoading,
+          loadingMore,
+          error,
+          currentCategory,
+          currentPage,
+          hasMore,
+          sidebarOpen,
+          darkMode,
+          processedContentHtml,
+          readArticleIds,
+          showBackToTop,
+          refreshing,
+          lastUpdated,
+          categories,
+          // 方法
+          isArticleRead,
+          getAllThumbnails,
+          formatDate,
+          handleImageError,
+          toggleSidebar,
+          toggleTheme,
+          changeCategory,
+          loadArticles,
+          viewArticle,
+          goBackToList,
+          goHome,
+          loadMore,
+          refreshList,
+          retryLastAction,
+          clearReadHistory,
+          scrollToTop
+        };
+      }
+    }).mount('#vue-app');
+  </script>
+</body>
+</html>
