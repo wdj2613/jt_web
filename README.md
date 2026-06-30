@@ -1,7 +1,7 @@
 # 每日囧图
 
 一个流畅浏览动态图与囧图专栏的响应式网站，采用 Material Design 3 风格。
-后端 Flask + 前端 Vue 3 (CDN)，支持 Docker 一键部署。
+后端 Flask + 前端 Vue 3 (CDN)，支持 Docker Hub 镜像拉取即用，一键部署。
 
 ## 功能特性
 
@@ -39,10 +39,66 @@
 
 ## 快速开始
 
-### 方式一：Docker 部署（推荐生产环境）
+### 方式一：Docker Hub 镜像部署（推荐，无需本地构建）
+
+镜像由 GitHub Actions 自动构建并推送到 Docker Hub，每次 `master` 分支有更新即触发。
 
 ```bash
-# 构建并启动（后台运行）
+# 拉取最新镜像
+docker pull wdj2613/daily-jiongtu:latest
+
+# 启动容器（后台运行，自动重启）
+docker run -d \
+  --name daily-jiongtu \
+  -p 5000:5000 \
+  -v $(pwd)/logs:/app/logs \
+  -v $(pwd)/config.json:/app/config.json:ro \
+  --restart unless-stopped \
+  wdj2613/daily-jiongtu:latest
+```
+
+启动后访问 `http://localhost:5000`。
+
+> **Windows (PowerShell)** 下将 `$(pwd)` 替换为 `${PWD}`。
+
+也可以使用 `docker-compose.yml` 编排。在任意目录创建如下文件：
+
+```yaml
+# docker-compose.yml —— 使用预构建镜像，无需克隆仓库
+services:
+  web:
+    image: wdj2613/daily-jiongtu:latest
+    container_name: daily-jiongtu
+    ports:
+      - "5000:5000"
+    environment:
+      - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+      - ./config.json:/app/config.json:ro
+    restart: unless-stopped
+```
+
+然后启动：
+
+```bash
+# 确保当前目录下有 config.json（可从仓库复制）
+docker compose up -d
+
+# 查看日志
+docker compose logs -f
+
+# 更新镜像
+docker compose pull && docker compose up -d
+```
+
+### 方式二：Docker 本地构建部署
+
+```bash
+# 克隆仓库并构建启动
+git clone git@github.com:wdj2613/jt_web.git
+cd jt_web
 docker compose up -d --build
 
 # 查看日志
@@ -69,7 +125,7 @@ docker compose down
 docker compose --profile dev up -d --build
 ```
 
-### 方式二：本地开发
+### 方式三：本地开发
 
 #### Windows
 
@@ -93,7 +149,7 @@ python app.py
 
 启动后访问 `http://localhost:5000`。
 
-### 方式三：生产环境（gunicorn 直接运行）
+### 方式四：生产环境（gunicorn 直接运行）
 
 ```bash
 python3 -m venv .venv
@@ -211,6 +267,7 @@ gunicorn -w 4 -b 0.0.0.0:5000 \
 ├── Dockerfile                # 多阶段构建，生产就绪
 ├── docker-compose.yml        # 编排文件（含 dev profile）
 ├── .dockerignore             # Docker 构建过滤
+├── .github/workflows/        # GitHub Actions 自动构建
 ├── .gitignore                # Git 忽略规则
 ├── start_server.bat          # Windows 一键启动脚本
 ├── frontend/
@@ -261,6 +318,25 @@ gunicorn -w 4 -b 0.0.0.0:5000 \
 
 ## Docker 运维
 
+### 更新镜像
+
+```bash
+# Docker Hub 镜像部署（方式一）—— 拉取最新并重建
+docker compose pull && docker compose up -d
+
+# 本地构建部署（方式二）—— 重新构建
+docker compose up -d --build
+
+# docker run 部署 —— 更新容器
+docker pull wdj2613/daily-jiongtu:latest
+docker stop daily-jiongtu && docker rm daily-jiongtu
+docker run -d --name daily-jiongtu -p 5000:5000 \
+  -v $(pwd)/logs:/app/logs \
+  -v $(pwd)/config.json:/app/config.json:ro \
+  --restart unless-stopped \
+  wdj2613/daily-jiongtu:latest
+```
+
 ### 查看日志
 
 ```bash
@@ -276,9 +352,6 @@ docker compose logs --tail 100
 ```bash
 # 修改 config.json 后重启
 docker compose restart web
-
-# 重新构建（修改代码后）
-docker compose up -d --build
 ```
 
 ### 进入容器调试
