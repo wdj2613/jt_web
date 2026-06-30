@@ -17,6 +17,7 @@
     SECRET_KEY=<随机密钥>
 """
 
+import logging
 import os
 from functools import wraps
 from typing import Optional, Tuple
@@ -31,6 +32,8 @@ from flask import (
 )
 
 from .config import config
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # 登录页面 HTML（内联，自包含样式，不依赖前端 SPA）
@@ -168,6 +171,7 @@ def _make_before_request_handler():
 
         # API 请求 → 401 JSON
         if path.startswith("/api/"):
+            logger.warning("Blocking unauthenticated API request: %s", path)
             return jsonify({"success": False, "error": "Unauthorized", "errorCode": 401}), 401
 
         # 页面请求 → 重定向登录页
